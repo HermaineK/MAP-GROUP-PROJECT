@@ -12,6 +12,8 @@
 ---
 
 # Project Structure
+
+```plaintext
 com.example.valentinesgarage
 ├── ui/ ← UI Layer
 │ ├── checkin/
@@ -48,6 +50,7 @@ com.example.valentinesgarage
 ├── MainActivity.kt ← Entry point
 └── build.gradle.kts ← Project configuration 
 ---
+```
 
 ## Dependencies
 
