@@ -65,6 +65,7 @@ android {
             implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
 
         testImplementation(libs.junit)
+        testImplementation(libs.kotlinx.coroutines.test)
         androidTestImplementation(libs.androidx.junit)
         androidTestImplementation(libs.androidx.espresso.core)
         androidTestImplementation(platform(libs.androidx.compose.bom))
