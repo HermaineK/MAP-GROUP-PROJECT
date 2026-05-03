@@ -1,9 +1,9 @@
 package com.example.valentinesgarage.data.local.entity
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
 import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "repair_tasks",
@@ -15,12 +15,21 @@ import androidx.room.Index
             onDelete = ForeignKey.CASCADE
         )
     ],
-            indices = [Index("truckId")] // <-- add this line
+    indices = [Index("truckId")]
 )
 data class RepairTask(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+
     val truckId: Int,
-    val task: String,
-    val completed: Boolean = false,
-    val notes: String? = null
+
+    val description: String,
+
+    val assignedMechanicId: Int? = null,
+
+    val mechanicName: String = "",
+
+    val isCompleted: Boolean = false,
+
+    val notes: String = ""
 )

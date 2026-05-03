@@ -4,44 +4,75 @@ import com.example.valentinesgarage.data.local.dao.EmployeeDao
 import com.example.valentinesgarage.data.local.dao.RepairTaskDao
 import com.example.valentinesgarage.data.local.dao.TruckDao
 import com.example.valentinesgarage.data.local.entity.Employee
+import com.example.valentinesgarage.data.local.entity.JobStatus
 import com.example.valentinesgarage.data.local.entity.RepairTask
 import com.example.valentinesgarage.data.local.entity.Truck
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class GarageRepository @Inject constructor(
+class GarageRepository(
     private val truckDao: TruckDao,
     private val repairTaskDao: RepairTaskDao,
-    private val employeeDao: EmployeeDao // <-- add this
+    private val employeeDao: EmployeeDao
 ) {
 
-    // ========================
-    // Truck operations
-    // ========================
+    fun getAllTrucks(): Flow<List<Truck>> {
+        return truckDao.getAllTrucks()
+    }
 
-    val trucks = truckDao.getAllTrucks()
-    // Truck operations
-    fun getAllTrucks(): Flow<List<Truck>> = truckDao.getAllTrucks()
-    suspend fun addTruck(truck: Truck) = truckDao.insertTruck(truck)
-    suspend fun updateTruck(truck: Truck) = truckDao.updateTruck(truck)
-    suspend fun deleteTruck(truck: Truck) = truckDao.deleteTruck(truck)
+    suspend fun getTruckById(id: Int): Truck? {
+        return truckDao.getTruckById(id)
+    }
 
+    suspend fun addTruck(truck: Truck): Long {
+        return truckDao.insertTruck(truck)
+    }
 
-    // ========================
-    // Repair Task operations
-    // ========================
-    fun getTasksForTruck(truckId: Int): Flow<List<RepairTask>> =
-        repairTaskDao.getTasksForTruck(truckId)
+    suspend fun updateTruck(truck: Truck) {
+        truckDao.updateTruck(truck)
+    }
 
-    suspend fun addRepairTask(task: RepairTask) = repairTaskDao.insertTask(task)
+    suspend fun updateTruckStatus(
+        truckId: Int,
+        status: JobStatus
+    ) {
+        val truck = truckDao.getTruckById(truckId)
 
-    suspend fun updateRepairTask(task: RepairTask) = repairTaskDao.updateTask(task)
+        if (truck != null) {
+            truckDao.updateTruck(
+                truck.copy(status = status)
+            )
+        }
+    }
 
-    suspend fun deleteRepairTask(task: RepairTask) = repairTaskDao.deleteTask(task)
+    fun getAllRepairTasks(): Flow<List<RepairTask>> {
+        return repairTaskDao.getAllRepairTasks()
+    }
 
-    suspend fun addEmployee(employee: Employee) = employeeDao.insertEmployee(employee)
-    suspend fun getEmployees() = employeeDao.getAllEmployees()
+    fun getTasksForTruck(truckId: Int): Flow<List<RepairTask>> {
+        return repairTaskDao.getTasksForTruck(truckId)
+    }
 
+    suspend fun getTasksForTruckOnce(truckId: Int): List<RepairTask> {
+        return repairTaskDao.getTasksForTruckOnce(truckId)
+    }
+
+    suspend fun addRepairTask(task: RepairTask) {
+        repairTaskDao.insertRepairTask(task)
+    }
+
+    suspend fun updateRepairTask(task: RepairTask) {
+        repairTaskDao.updateRepairTask(task)
+    }
+
+    suspend fun deleteRepairTask(task: RepairTask) {
+        repairTaskDao.deleteRepairTask(task)
+    }
+
+    fun getAllEmployees(): Flow<List<Employee>> {
+        return employeeDao.getAllEmployees()
+    }
+
+    suspend fun addEmployee(employee: Employee) {
+        employeeDao.insertEmployee(employee)
+    }
 }

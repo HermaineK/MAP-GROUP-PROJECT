@@ -1,21 +1,31 @@
 package com.example.valentinesgarage.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
 import com.example.valentinesgarage.data.local.entity.RepairTask
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RepairTaskDao {
 
-    @Query("SELECT * FROM repair_tasks WHERE truckId = :truckId")
+    @Insert
+    suspend fun insertRepairTask(task: RepairTask)
+
+    @Query("SELECT * FROM repair_tasks ORDER BY id DESC")
+    fun getAllRepairTasks(): Flow<List<RepairTask>>
+
+    @Query("SELECT * FROM repair_tasks WHERE truckId = :truckId ORDER BY id DESC")
     fun getTasksForTruck(truckId: Int): Flow<List<RepairTask>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTask(task: RepairTask)
+    @Query("SELECT * FROM repair_tasks WHERE truckId = :truckId")
+    suspend fun getTasksForTruckOnce(truckId: Int): List<RepairTask>
 
     @Update
-    suspend fun updateTask(task: RepairTask)
+    suspend fun updateRepairTask(task: RepairTask)
 
     @Delete
-    suspend fun deleteTask(task: RepairTask)
+    suspend fun deleteRepairTask(task: RepairTask)
 }

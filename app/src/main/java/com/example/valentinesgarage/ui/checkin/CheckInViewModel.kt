@@ -2,10 +2,9 @@ package com.example.valentinesgarage.ui.checkin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.valentinesgarage.data.repository.GarageRepository
 import com.example.valentinesgarage.data.local.entity.Truck
+import com.example.valentinesgarage.data.repository.GarageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-//import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -18,17 +17,27 @@ class CheckInViewModel @Inject constructor(
 ) : ViewModel() {
 
     val trucks: StateFlow<List<Truck>> = repository.getAllTrucks()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addTestTruck() {
+    fun addTruck(
+        licensePlate: String,
+        condition: String,
+        kilometers: Int,
+        ownerName: String,
+        ownerId: String,
+        phoneNumber: String
+    ) {
         viewModelScope.launch {
-            val truck = Truck(
-                id = 0, // Room will auto-generate ID
-                licensePlate = "TEST-123",
-                condition = "Good",
-                kilometers = 100
+            repository.addTruck(
+                Truck(
+                    licensePlate = licensePlate,
+                    condition = condition,
+                    kilometers = kilometers,
+                    ownerName = ownerName,
+                    ownerId = ownerId,
+                    phoneNumber = phoneNumber
+                )
             )
-            repository.addTruck(truck)
         }
     }
 }

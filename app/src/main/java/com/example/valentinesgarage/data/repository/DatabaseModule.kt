@@ -24,7 +24,8 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "garage_db"
-        ).build()
+        ) .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -45,4 +46,6 @@ object DatabaseModule {
     ): GarageRepository {
         return GarageRepository(truckDao, repairTaskDao, employeeDao)
     }
+
+
 }

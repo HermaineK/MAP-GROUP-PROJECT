@@ -17,10 +17,12 @@ class TestViewModel @Inject constructor(
     // Truck
     suspend fun addTestTruck() {
         val truck = Truck(
-            id = 0,
             licensePlate = "ABC123",
             condition = "Good",
-            kilometers = 1000
+            kilometers = 1000,
+            ownerName = "John Doe",
+            ownerId = "123456789",
+            phoneNumber = "0812345678"
         )
         repository.addTruck(truck)
     }
@@ -40,11 +42,11 @@ class TestViewModel @Inject constructor(
     // RepairTask
     suspend fun addTestRepairTask() {
         val task = RepairTask(
-            id = 0,
             truckId = 1,
-            task = "oil change",// make sure a truck exists first
-            completed = false,
-            notes = "Left wheel is not complete"
+            description = "Oil change",
+            assignedMechanicId = null,
+            isCompleted = false,
+            notes = ""
         )
         repository.addRepairTask(task)
     }
