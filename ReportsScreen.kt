@@ -1,520 +1,637 @@
-package com.valentinegarage.ui.reports
+package com.example.valentinesgarage.ui.report
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.valentinegarage.models.CheckIn
-import com.valentinegarage.models.RepairTask
-import com.valentinegarage.viewmodel.FilterMode
-import com.valentinegarage.viewmodel.ReportsUiState
-import com.valentinegarage.viewmodel.ReportsViewModel
-import java.text.SimpleDateFormat
-import java.util.*
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.valentinesgarage.data.local.entity.JobStatus
+import com.example.valentinesgarage.data.local.entity.RepairTask
+import com.example.valentinesgarage.data.local.entity.Truck
+import com.example.valentinesgarage.ui.components.QuickHomeButton
 
 // ── Colour palette ────────────────────────────────────────────────────────────
-private val GarageBlue   = Color(0xFF1A3C5E)
-private val AccentOrange = Color(0xFFE8741A)
-private val CardBg       = Color(0xFFF5F7FA)
-private val GreenDone    = Color(0xFF2E7D32)
-private val RedPending   = Color(0xFFC62828)
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val ReportsBg          = Color(0xFFF5F7FB)
+private val ReportsBlueStart   = Color(0xFF1DA1F2)
+private val ReportsBlueEnd     = Color(0xFF2563EB)
+private val ReportsOrangeStart = Color(0xFFFFB347)
+private val ReportsOrangeEnd   = Color(0xFFFF8C42)
+private val ReportsGreenStart  = Color(0xFF34D399)
+private val ReportsGreenEnd    = Color(0xFF10B981)
+private val ReportsPurpleStart = Color(0xFFA78BFA)
+private val ReportsPurpleEnd   = Color(0xFF7C3AED)
+private val ReportsRed         = Color(0xFFEF4444)
+
+// ── Entry point ───────────────────────────────────────────────────────────────
+
+
 @Composable
-fun ReportsScreen(vm: ReportsViewModel = viewModel()) {
-
-    val uiState      by vm.uiState.collectAsStateWithLifecycle()
-    val selectedTab  by vm.selectedTab.collectAsStateWithLifecycle()
-    val filterMode   by vm.filterMode.collectAsStateWithLifecycle()
-    val selectedFilter by vm.selectedFilter.collectAsStateWithLifecycle()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Valentine's Garage", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Reports & Insights", fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = GarageBlue,
-                    titleContentColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = { vm.loadReports() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh",
-                            tint = Color.White)
-                    }
-                }
-            )
-        }
-    ) { padding ->
-
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .background(Color(0xFFF0F2F5))
-        ) {
-
-            // ── Tab Row ───────────────────────────────────────────────────────
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = GarageBlue,
-                contentColor = Color.White,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = AccentOrange,
-                        height = 3.dp
-                    )
-                }
-            ) {
-                Tab(selected = selectedTab == 0, onClick = { vm.setTab(0) },
-                    text = { Text("Repair Tasks") })
-                Tab(selected = selectedTab == 1, onClick = { vm.setTab(1) },
-                    text = { Text("Check-In History") })
-            }
-
-            // ── Filter bar ────────────────────────────────────────────────────
-            if (uiState is ReportsUiState.Success) {
-                val state = uiState as ReportsUiState.Success
-                FilterBar(
-                    employeeNames = state.employeeNames,
-                    truckPlates   = state.truckPlates,
-                    filterMode    = filterMode,
-                    selectedFilter = selectedFilter,
-                    onFilterEmployee = { vm.applyFilter(FilterMode.BY_EMPLOYEE, it) },
-                    onFilterTruck    = { vm.applyFilter(FilterMode.BY_TRUCK, it) },
-                    onClearFilter    = { vm.clearFilter() }
-                )
-            }
-
-            // ── Content ───────────────────────────────────────────────────────
-            when (val state = uiState) {
-                is ReportsUiState.Loading -> LoadingView()
-                is ReportsUiState.Error   -> ErrorView(state.message) { vm.loadReports() }
-                is ReportsUiState.Success -> {
-                    if (selectedTab == 0) {
-                        RepairTasksList(tasks = state.tasks)
-                    } else {
-                        CheckInList(checkIns = state.checkIns)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── Filter Bar ────────────────────────────────────────────────────────────────
-@Composable
-fun FilterBar(
-    employeeNames: List<String>,
-    truckPlates: List<String>,
-    filterMode: FilterMode,
-    selectedFilter: String,
-    onFilterEmployee: (String) -> Unit,
-    onFilterTruck: (String) -> Unit,
-    onClearFilter: () -> Unit
+fun ReportScreen(
+    onGoHome: () -> Unit,
+    viewModel: ReportsViewModel = hiltViewModel()
 ) {
-    var showEmployeeMenu by remember { mutableStateOf(false) }
-    var showTruckMenu    by remember { mutableStateOf(false) }
+    val state by viewModel.uiState.collectAsState()
 
-    Surface(shadowElevation = 2.dp, color = Color.White) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("Filter:", fontWeight = FontWeight.Medium, color = GarageBlue,
-                modifier = Modifier.padding(end = 4.dp))
-
-            // Employee dropdown
-            Box {
-                FilterChip(
-                    selected = filterMode == FilterMode.BY_EMPLOYEE,
-                    onClick = { showEmployeeMenu = true },
-                    label = {
-                        Text(if (filterMode == FilterMode.BY_EMPLOYEE) selectedFilter else "Employee")
-                    },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                )
-                DropdownMenu(expanded = showEmployeeMenu,
-                    onDismissRequest = { showEmployeeMenu = false }) {
-                    employeeNames.forEach { name ->
-                        DropdownMenuItem(text = { Text(name) }, onClick = {
-                            onFilterEmployee(name); showEmployeeMenu = false
-                        })
-                    }
-                }
-            }
-
-            // Truck dropdown
-            Box {
-                FilterChip(
-                    selected = filterMode == FilterMode.BY_TRUCK,
-                    onClick = { showTruckMenu = true },
-                    label = {
-                        Text(if (filterMode == FilterMode.BY_TRUCK) selectedFilter else "Vehicle")
-                    },
-                    leadingIcon = { Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                )
-                DropdownMenu(expanded = showTruckMenu,
-                    onDismissRequest = { showTruckMenu = false }) {
-                    truckPlates.forEach { plate ->
-                        DropdownMenuItem(text = { Text(plate) }, onClick = {
-                            onFilterTruck(plate); showTruckMenu = false
-                        })
-                    }
-                }
-            }
-
-            if (filterMode != FilterMode.NONE) {
-                TextButton(onClick = onClearFilter) {
-                    Text("Clear", color = AccentOrange)
-                }
-            }
-        }
-    }
-}
-
-// ── Repair Tasks List ─────────────────────────────────────────────────────────
-@Composable
-fun RepairTasksList(tasks: List<RepairTask>) {
-    if (tasks.isEmpty()) {
-        EmptyView("No repair tasks found")
-        return
-    }
-
-    // Group tasks by employee
-    val grouped = tasks.groupBy { it.completedBy.ifBlank { "Unassigned" } }
-
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ReportsBg)
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        grouped.forEach { (employee, employeeTasks) ->
-            item {
-                EmployeeTaskGroup(employeeName = employee, tasks = employeeTasks)
-            }
-        }
 
-        // Summary card at the bottom
-        item {
-            SummaryCard(
-                totalTasks = tasks.size,
-                completedTasks = tasks.count { it.isCompleted }
+        // ── Header ────────────────────────────────────────────────────────────
+        ReportsHeaderCard()
+        QuickHomeButton(onGoHome = onGoHome)
+
+        // ── Metrics ───────────────────────────────────────────────────────────
+        Text(
+            text = "Overview",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ReportsMetricCard(
+                modifier    = Modifier.weight(1f),
+                title       = "Total Trucks",
+                value       = state.totalTrucks.toString(),
+                subtitle    = "Checked in",
+                startColor  = ReportsBlueStart,
+                endColor    = ReportsBlueEnd
+            )
+            ReportsMetricCard(
+                modifier    = Modifier.weight(1f),
+                title       = "Total Tasks",
+                value       = state.totalTasks.toString(),
+                subtitle    = "Logged",
+                startColor  = ReportsOrangeStart,
+                endColor    = ReportsOrangeEnd
             )
         }
-    }
-}
 
-@Composable
-fun EmployeeTaskGroup(employeeName: String, tasks: List<RepairTask>) {
-    val completedCount = tasks.count { it.isCompleted }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ReportsMetricCard(
+                modifier    = Modifier.weight(1f),
+                title       = "Completed",
+                value       = state.completedTasks.toString(),
+                subtitle    = "Finished",
+                startColor  = ReportsGreenStart,
+                endColor    = ReportsGreenEnd
+            )
+            ReportsMetricCard(
+                modifier    = Modifier.weight(1f),
+                title       = "Pending",
+                value       = state.pendingTasks.toString(),
+                subtitle    = "Open",
+                startColor  = ReportsPurpleStart,
+                endColor    = ReportsPurpleEnd
+            )
+        }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        // ── Search ────────────────────────────────────────────────────────────
+        OutlinedTextField(
+            value         = state.searchQuery,
+            onValueChange = viewModel::onSearchQueryChanged,
+            modifier      = Modifier.fillMaxWidth(),
+            label         = { Text("Search by licence plate") },
+            shape         = RoundedCornerShape(16.dp)
+        )
 
-            // Employee header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = GarageBlue.copy(alpha = 0.1f),
-                    modifier = Modifier.size(42.dp)
+        // ── Status filter ─────────────────────────────────────────────────────
+        Text(
+            text       = "Filter by Job Status",
+            style      = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Row(
+            modifier                = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement   = Arrangement.spacedBy(8.dp)
+        ) {
+            StatusFilterChip(
+                text     = "All",
+                selected = state.selectedStatus == null,
+                onClick  = { viewModel.onStatusSelected(null) }
+            )
+            StatusFilterChip(
+                text     = "Created",
+                selected = state.selectedStatus == JobStatus.CREATED,
+                onClick  = { viewModel.onStatusSelected(JobStatus.CREATED) }
+            )
+            StatusFilterChip(
+                text     = "In Progress",
+                selected = state.selectedStatus == JobStatus.IN_PROGRESS,
+                onClick  = { viewModel.onStatusSelected(JobStatus.IN_PROGRESS) }
+            )
+            StatusFilterChip(
+                text     = "Completed",
+                selected = state.selectedStatus == JobStatus.COMPLETED,
+                onClick  = { viewModel.onStatusSelected(JobStatus.COMPLETED) }
+            )
+            StatusFilterChip(
+                text     = "Closed",
+                selected = state.selectedStatus == JobStatus.CLOSED,
+                onClick  = { viewModel.onStatusSelected(JobStatus.CLOSED) }
+            )
+        }
+
+        // ── Employee filter ───────────────────────────────────────────────────
+        AnimatedVisibility(
+            visible = state.employeeNames.isNotEmpty(),
+            enter   = fadeIn() + expandVertically(),
+            exit    = fadeOut() + shrinkVertically()
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text       = "Filter by Employee",
+                    style      = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Row(
+                    modifier              = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Person, contentDescription = null,
-                            tint = GarageBlue, modifier = Modifier.size(24.dp))
+                    EmployeeFilterChip(
+                        name     = "All Staff",
+                        selected = state.selectedEmployee == null,
+                        onClick  = { viewModel.onEmployeeSelected(null) }
+                    )
+                    state.employeeNames.forEach { name ->
+                        EmployeeFilterChip(
+                            name     = name,
+                            selected = state.selectedEmployee == name,
+                            onClick  = { viewModel.onEmployeeSelected(name) }
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(employeeName, fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp, color = GarageBlue)
-                    Text("$completedCount / ${tasks.size} tasks completed",
-                        fontSize = 12.sp, color = Color.Gray)
-                }
-                // Progress pill
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (completedCount == tasks.size) GreenDone.copy(alpha = 0.15f)
-                            else AccentOrange.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        "${(completedCount.toFloat() / tasks.size * 100).toInt()}%",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        color = if (completedCount == tasks.size) GreenDone else AccentOrange,
-                        fontWeight = FontWeight.Bold, fontSize = 13.sp
-                    )
-                }
-            }
-
-            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
-
-            // Task rows
-            tasks.forEach { task ->
-                TaskRow(task = task)
-                if (task != tasks.last()) {
-                    Divider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(vertical = 4.dp))
-                }
             }
         }
-    }
-}
 
-@Composable
-fun TaskRow(task: RepairTask) {
-    val fmt = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+        // ── Active filter summary ─────────────────────────────────────────────
+        val filterActive = state.selectedStatus != null ||
+            state.selectedEmployee != null ||
+            state.searchQuery.isNotBlank()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            imageVector = if (task.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = if (task.isCompleted) GreenDone else Color.LightGray,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(task.taskName, fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                textDecoration = if (task.isCompleted)
-                    androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                color = if (task.isCompleted) Color.Gray else Color.Black
-            )
-            if (task.notes.isNotBlank()) {
-                Text("📝 ${task.notes}", fontSize = 12.sp, color = Color.Gray,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp))
-            }
-            Row(modifier = Modifier.padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (task.truckPlate.isNotBlank()) {
-                    InfoChip(icon = Icons.Default.DirectionsCar, text = task.truckPlate)
-                }
-                if (task.isCompleted && task.completedAt != null) {
-                    InfoChip(
-                        icon = Icons.Default.Schedule,
-                        text = fmt.format(task.completedAt.toDate())
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun InfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = CardBg
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(10.dp),
-                tint = Color.Gray)
-            Text(text, fontSize = 10.sp, color = Color.Gray)
-        }
-    }
-}
-
-// ── Check-In List ─────────────────────────────────────────────────────────────
-@Composable
-fun CheckInList(checkIns: List<CheckIn>) {
-    if (checkIns.isEmpty()) {
-        EmptyView("No check-in records found")
-        return
-    }
-
-    val fmt = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(checkIns.sortedByDescending { it.checkedInAt.seconds }) { checkIn ->
-            CheckInCard(checkIn = checkIn, fmt = fmt)
-        }
-    }
-}
-
-@Composable
-fun CheckInCard(checkIn: CheckIn, fmt: SimpleDateFormat) {
-    val conditionColor = when (checkIn.conditionRating) {
-        5    -> GreenDone
-        4    -> Color(0xFF66BB6A)
-        3    -> Color(0xFFFFA726)
-        2    -> Color(0xFFEF5350)
-        else -> RedPending
-    }
-    val conditionLabel = when (checkIn.conditionRating) {
-        5 -> "Excellent"; 4 -> "Good"; 3 -> "Fair"; 2 -> "Poor"; else -> "Critical"
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-
-            // Condition rating circle
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = conditionColor.copy(alpha = 0.15f),
-                modifier = Modifier.size(52.dp)
+        AnimatedVisibility(visible = filterActive) {
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        "${checkIn.conditionRating}/5",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 14.sp,
-                        color = conditionColor
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(checkIn.truckPlate.ifBlank { "Unknown Truck" },
-                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = GarageBlue)
-                Text(fmt.format(checkIn.checkedInAt.toDate()),
-                    fontSize = 12.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    InfoChip(Icons.Default.Speed, "${checkIn.kilometersDriven} km")
-                    InfoChip(Icons.Default.Build, conditionLabel)
-                }
-                if (checkIn.conditionDescription.isNotBlank()) {
-                    Text(checkIn.conditionDescription,
-                        fontSize = 12.sp, color = Color.DarkGray,
-                        modifier = Modifier.padding(top = 6.dp),
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-    }
-}
-
-// ── Summary Card ──────────────────────────────────────────────────────────────
-@Composable
-fun SummaryCard(totalTasks: Int, completedTasks: Int) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = GarageBlue),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text("📊 Summary", fontWeight = FontWeight.Bold,
-                color = Color.White, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly) {
-                SummaryItem(label = "Total Tasks", value = "$totalTasks")
-                SummaryItem(label = "Completed",   value = "$completedTasks", color = Color(0xFF81C784))
-                SummaryItem(label = "Pending",
-                    value = "${totalTasks - completedTasks}",
-                    color = Color(0xFFFFB74D))
-                SummaryItem(
-                    label = "Rate",
-                    value = if (totalTasks > 0)
-                        "${(completedTasks.toFloat() / totalTasks * 100).toInt()}%" else "0%",
-                    color = Color(0xFF4FC3F7)
+                Text(
+                    text  = "Showing ${state.filteredTrucks.size} of ${state.trucks.size} trucks",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text     = "Clear filters",
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = ReportsBlueEnd,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { viewModel.clearFilters() }
                 )
             }
         }
+
+        // ── Truck reports ─────────────────────────────────────────────────────
+        Text(
+            text       = "Truck Reports",
+            style      = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        when {
+            state.trucks.isEmpty()         -> EmptyReportsState()
+            state.filteredTrucks.isEmpty() -> EmptyFilteredReportsState()
+            else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                state.filteredTrucks.forEach { truck ->
+                    val truckTasks = state.filteredTasks.filter { it.truckId == truck.id }
+                    TruckReportCard(truck = truck, tasks = truckTasks)
+                }
+            }
+        }
+
+        // ── Employee work report ──────────────────────────────────────────────
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text       = "Employee Work Report",
+            style      = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        val groupedByMechanic = state.filteredTasks
+            .filter { it.mechanicName.isNotBlank() }
+            .groupBy { it.mechanicName }
+
+        if (groupedByMechanic.isEmpty()) {
+            EmptyEmployeeReportCard()
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                groupedByMechanic.forEach { (mechanicName, tasks) ->
+                    EmployeeReportCard(mechanicName = mechanicName, tasks = tasks)
+                }
+            }
+        }
     }
 }
 
-@Composable
-fun SummaryItem(label: String, value: String, color: Color = Color.White) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = color)
-        Text(label, fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
-    }
-}
+// ── Private composables ───────────────────────────────────────────────────────
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 @Composable
-fun LoadingView() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = GarageBlue)
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("Loading reports...", color = Color.Gray)
+private fun ReportsHeaderCard() {
+    Card(
+        shape     = RoundedCornerShape(24.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier  = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier          = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier          = Modifier
+                    .size(52.dp)
+                    .background(
+                        brush = Brush.linearGradient(listOf(ReportsGreenStart, ReportsGreenEnd)),
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                contentAlignment  = Alignment.Center
+            ) {
+                Text(text = "RP", color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.size(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text       = "Reports Dashboard",
+                    style      = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text  = "Truck condition history, kilometres, repairs, and employee work.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Box(
+                modifier         = Modifier
+                    .size(38.dp)
+                    .background(Color(0xFFEFFAF5), shape = CircleShape),
+                contentAlignment = Alignment.Center
+            ) { Text(text = "📊") }
         }
     }
 }
 
 @Composable
-fun ErrorView(message: String, onRetry: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)) {
-            Icon(Icons.Default.ErrorOutline, contentDescription = null,
-                tint = RedPending, modifier = Modifier.size(48.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("Failed to load reports", fontWeight = FontWeight.Bold)
-            Text(message, fontSize = 12.sp, color = Color.Gray,
-                modifier = Modifier.padding(top = 4.dp))
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = GarageBlue)) {
-                Text("Try Again")
+private fun ReportsMetricCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    subtitle: String,
+    startColor: Color,
+    endColor: Color
+) {
+    Card(
+        modifier  = modifier,
+        shape     = RoundedCornerShape(22.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    brush = Brush.linearGradient(listOf(startColor, endColor)),
+                    shape = RoundedCornerShape(22.dp)
+                )
+                .padding(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = title,   color = Color.White.copy(alpha = 0.95f), style = MaterialTheme.typography.bodyMedium)
+                Text(text = value,   color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(text = subtitle, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun StatusFilterChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val bg   = if (selected) ReportsBlueEnd else Color.White
+    val fg   = if (selected) Color.White    else MaterialTheme.colorScheme.onSurface
+
+    Card(
+        modifier  = Modifier.clickable(onClick = onClick),
+        shape     = RoundedCornerShape(50.dp),
+        colors    = CardDefaults.cardColors(containerColor = bg),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 4.dp else 1.dp)
+    ) {
+        Text(
+            text       = text,
+            color      = fg,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            modifier   = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
+
+@Composable
+private fun EmployeeFilterChip(
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (selected) ReportsPurpleEnd else Color.White
+    val fg = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+
+    Card(
+        modifier  = Modifier.clickable(onClick = onClick),
+        shape     = RoundedCornerShape(50.dp),
+        colors    = CardDefaults.cardColors(containerColor = bg),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 4.dp else 1.dp)
+    ) {
+        Row(
+            modifier          = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = "👤", style = MaterialTheme.typography.bodySmall)
+            Text(text = name, color = fg,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun EmptyReportsState() {
+    Card(
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier  = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "No report data yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                text  = "Add trucks and repair tasks to start generating reports.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyFilteredReportsState() {
+    Card(
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier  = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "No trucks match your filters", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                text  = "Try clearing the filters or changing your search.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyEmployeeReportCard() {
+    Card(
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier  = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "No employee work recorded yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                text  = "Add repair tasks with mechanic names to generate employee reports.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun TruckReportCard(truck: Truck, tasks: List<RepairTask>) {
+    val completedCount = tasks.count { it.isCompleted }
+    val pendingCount   = tasks.count { !it.isCompleted }
+
+    Card(
+        shape     = RoundedCornerShape(22.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier  = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier         = Modifier
+                        .size(48.dp)
+                        .background(ReportsBlueStart.copy(alpha = 0.14f), shape = RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) { Text("🚛") }
+
+                Spacer(modifier = Modifier.size(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = truck.licensePlate, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(text = "Condition at check-in: ${truck.condition}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "Kilometres at check-in: ${truck.kilometers} km", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "Owner: ${truck.ownerName}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    JobStatusBadge(status = truck.status)
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ReportsMiniInfoCard(title = "Tasks",   value = tasks.size.toString(),         modifier = Modifier.weight(1f), accent = ReportsBlueEnd)
+                ReportsMiniInfoCard(title = "Done",    value = completedCount.toString(),      modifier = Modifier.weight(1f), accent = ReportsGreenEnd)
+                ReportsMiniInfoCard(title = "Pending", value = pendingCount.toString(),        modifier = Modifier.weight(1f), accent = ReportsPurpleEnd)
+            }
+
+            if (tasks.isEmpty()) {
+                Text(
+                    text  = "No repair tasks recorded for this truck yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Repair Task Details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    tasks.forEach { task -> TaskReportItem(task = task) }
+                }
             }
         }
     }
 }
 
 @Composable
-fun EmptyView(message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.SearchOff, contentDescription = null,
-                tint = Color.LightGray, modifier = Modifier.size(52.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(message, color = Color.Gray)
+private fun JobStatusBadge(status: JobStatus) {
+    val (label, colour) = when (status) {
+        JobStatus.CREATED     -> "Created"     to ReportsBlueEnd
+        JobStatus.IN_PROGRESS -> "In Progress" to ReportsOrangeEnd
+        JobStatus.COMPLETED   -> "Completed"   to ReportsGreenEnd
+        JobStatus.CLOSED      -> "Closed"      to ReportsRed
+    }
+    Text(text = "Job status: $label", style = MaterialTheme.typography.bodyMedium, color = colour, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun TaskReportItem(task: RepairTask) {
+    Card(
+        shape    = RoundedCornerShape(16.dp),
+        colors   = CardDefaults.cardColors(
+            containerColor = if (task.isCompleted) ReportsGreenEnd.copy(alpha = 0.08f)
+                             else ReportsOrangeEnd.copy(alpha = 0.08f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = task.description, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(text = "Mechanic: ${task.mechanicName.ifBlank { "Not assigned" }}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Status: ${if (task.isCompleted) "✅ Completed" else "🔧 Pending"}", style = MaterialTheme.typography.bodyMedium)
+            if (task.notes.isNotBlank()) {
+                Text(text = "Notes: ${task.notes}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmployeeReportCard(mechanicName: String, tasks: List<RepairTask>) {
+    val completed = tasks.count { it.isCompleted }
+    val pending   = tasks.count { !it.isCompleted }
+
+    Card(
+        shape     = RoundedCornerShape(22.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier  = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier         = Modifier
+                        .size(48.dp)
+                        .background(ReportsPurpleEnd.copy(alpha = 0.14f), shape = RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) { Text("👤") }
+
+                Spacer(modifier = Modifier.size(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = mechanicName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(text = "Employee repair activity", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ReportsMiniInfoCard(title = "Tasks",   value = tasks.size.toString(), modifier = Modifier.weight(1f), accent = ReportsBlueEnd)
+                ReportsMiniInfoCard(title = "Done",    value = completed.toString(),  modifier = Modifier.weight(1f), accent = ReportsGreenEnd)
+                ReportsMiniInfoCard(title = "Pending", value = pending.toString(),    modifier = Modifier.weight(1f), accent = ReportsOrangeEnd)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                tasks.forEach { task ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(text = if (task.isCompleted) "✅" else "🔧")
+                        Column {
+                            Text(text = task.description, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            if (task.notes.isNotBlank()) {
+                                Text(text = task.notes, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportsMiniInfoCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    accent: Color
+) {
+    Card(
+        modifier  = modifier,
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.10f))
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
     }
 }
